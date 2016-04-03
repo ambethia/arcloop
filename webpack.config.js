@@ -25,13 +25,15 @@ var config = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        loaders: [
-          'babel',
-        ],
+        loader: 'babel',
       },
       {
         test: /\.css$/,
-        loader: 'style!raw',
+        loaders: ['style','raw'],
+      },
+      {
+        test: /\.json$/,
+        loader: 'json',
       },
       {
         test: /\.glsl$/,
