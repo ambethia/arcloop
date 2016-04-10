@@ -1,9 +1,12 @@
 -cp src
 -main Main
 -lib format
+-lib poly2trihx
 -debug
 -neko dist/swflux.n
--xml doc.xml
--cmd neko dist/swflux test/simple.swf
+# -xml doc/source.xml
+# -cmd neko dist/swflux test/simple.swf
 # -cmd neko dist/swflux test/blob.swf
-# -cmd haxelib run dox -o doc -i doc.xml
+# -cmd neko dist/swflux test/layers.swf
+-cmd neko dist/swflux test/triangle.swf
+# -cmd haxelib run dox -o doc -i doc/source.xml

@@ -16,7 +16,7 @@ var config = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: "Veq",
+      title: "arcloop",
     }),
     new webpack.NoErrorsPlugin(),
   ],

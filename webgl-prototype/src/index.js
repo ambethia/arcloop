@@ -4,7 +4,9 @@ import fragmentShader from './shaders/bezier.f.glsl';
 import aaFragmentShader from './shaders/bezier-aa.f.glsl';
 import createProgram from './shaders/createProgram';
 
-import simple from '../test/simple.json';
+// import animData from '../test/simple.json';
+import animData from '../test/blob.json';
+// import animData from '../test/layers.json';
 
 import { mat4 } from 'gl-matrix';
 
@@ -22,16 +24,19 @@ function resizeCanvas() {
 }
 
 const ANIMATION_TIMING = 30;
-const VEC_ATTR_LENGTH = 8;
+const VEC_ATTR_LENGTH = 13;
 const canvas = document.createElement('canvas');
 const gl = canvas.getContext('webgl');
-const aaEnabled = gl.getExtension('OES_standard_derivatives') != -1;
+window.gl = gl;
+const aaEnabled = false; //gl.getExtension('OES_standard_derivatives') != -1;
 // gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.BLEND);
 gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 const shaderProgram = createProgram(gl, vertexShader, aaEnabled ? aaFragmentShader : fragmentShader);
 const positionLocation = gl.getAttribLocation(shaderProgram, 'position');
-const fillLocation = gl.getAttribLocation(shaderProgram, 'fill');
+const typeLocation = gl.getAttribLocation(shaderProgram, 'type');
+const fill0Location = gl.getAttribLocation(shaderProgram, 'fill0');
+const fill1Location = gl.getAttribLocation(shaderProgram, 'fill1');
 const buffer = gl.createBuffer();
 const viewMatrix = mat4.create();
 const projectionMatrix = mat4.create();
@@ -43,19 +48,30 @@ let globalFrame = 0;
 let data = [];
 
 function update() {
-  let i = globalFrame % simple.animations["simple"].frames.length;
-  let f = simple.animations["simple"].frames[i];
-  data = simple.shapes[f].reduce((shapes, shape, d) => {
-    let [r, g, b, a] = shape.fill;
-    return shapes.concat(shape.curves.reduce((curves, curve) => {
-      return curves.concat([
-        curve[0][0], curve[0][1], -d, 0, r, g, b, a,
-        curve[1][0], curve[1][1], -d, 1, r, g, b, a,
-        curve[2][0], curve[2][1], -d, 2, r, g, b, a,
+  let anim = animData.animations['blob'];
+  let i = globalFrame % anim.frames.length;
+  let f = anim.frames[i];
+  data = animData.shapes[f].reduce((shapes, shape, d) => {
+    let fill0 = extractRGBA(shape.fills[0]);
+    let fill1 = extractRGBA(shape.fills[1]);
+    return shapes.concat(shape.tris.reduce((tris, tri) => {
+      return tris.concat([
+        tri[0][0], tri[0][1], -d, 0, tri[3], ...fill0, ...fill1,
+        tri[1][0], tri[1][1], -d, 1, tri[3], ...fill0, ...fill1,
+        tri[2][0], tri[2][1], -d, 2, tri[3], ...fill0, ...fill1,
       ]);
     }, []));
   }, []);
   globalFrame++;
+}
+
+function extractRGBA(n) {
+  return [
+    n >> 24 & 255,
+    n >> 16 & 255,
+    n >>  8 & 255,
+    n       & 255
+  ]
 }
 
 function render() {
@@ -68,17 +84,23 @@ function render() {
     gl.uniformMatrix4fv(viewLocation, false, viewMatrix);
     gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, VEC_ATTR_LENGTH * Float32Array.BYTES_PER_ELEMENT, 0);
-    gl.enableVertexAttribArray(fillLocation);
-    gl.vertexAttribPointer(fillLocation, 4, gl.FLOAT, false, VEC_ATTR_LENGTH * Float32Array.BYTES_PER_ELEMENT, 4 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(typeLocation);
+    gl.enableVertexAttribArray(fill0Location);
+    gl.enableVertexAttribArray(fill1Location);
+    gl.vertexAttribPointer(positionLocation, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 0);
+    gl.vertexAttribPointer(typeLocation, 1, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 4 * Int16Array.BYTES_PER_ELEMENT);
+    gl.vertexAttribPointer(fill0Location, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 5 * Int16Array.BYTES_PER_ELEMENT);
+    gl.vertexAttribPointer(fill1Location, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 9 * Int16Array.BYTES_PER_ELEMENT);
     gl.drawArrays(gl.TRIANGLES, 0, data.length / VEC_ATTR_LENGTH);
   }
   requestAnimationFrame(render);
 }
 
 setInterval(update, 1000/ANIMATION_TIMING);
+// update();
+// console.log(data);
 
 document.body.appendChild(canvas);
 gl.useProgram(shaderProgram);

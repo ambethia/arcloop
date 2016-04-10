@@ -1,0 +1,6 @@
+-cp src
+-main Main
+-lib format
+-lib poly2trihx
+-neko dist/swflux.n
+-cmd nekotools boot dist/swflux.n

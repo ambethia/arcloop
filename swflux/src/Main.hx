@@ -5,7 +5,7 @@ using Lambda;
 
 class Main {
 
-  var shapes : Map<Int, Array<Shape>>;
+  var shapes : Map<Int, Shape>;
   var clips : Map<Int, Clip>;
 
   static function main() {
@@ -31,12 +31,48 @@ class Main {
     }
 
     for( key in parser.shapes.keys() ) {
-      var shape = parser.shapes[key].map(function(part) {
+      var shape = parser.shapes[key].parts.map(function(part) {
+        var triangles = new Array<Dynamic>();
+
+        for (tri in part.curves) {
+          var tri : Array<Dynamic> = [tri.a.toA(), tri.b.toA(), tri.c.toA(), tri.type];
+          triangles.push(tri);
+        };
+
+        if( part.polys.length > 0 ) {
+          var vp = new org.poly2tri.VisiblePolygon();
+          for( poly in part.polys ) {
+            vp.addPolyline(poly.points.map(function(point) { return point.p2t(); }));
+          }
+          vp.performTriangulationOnce();
+          var verts = vp.getVerticesAndTriangles().vertices;
+          var tris = vp.getVerticesAndTriangles().triangles;
+          for(i in 0...vp.getNumTriangles() ) {
+            var a : Array<Dynamic> = [
+              [
+                verts[tris[i]*3],
+                verts[tris[i]*3+1]
+              ],
+              [
+                verts[tris[i+1]*3],
+                verts[tris[i+1]*3+1]
+              ],
+              [
+                verts[tris[i+2]*3],
+                verts[tris[i+2]*3+1]
+              ],
+              SolidTriangle
+            ];
+            triangles.push(a);
+          }
+        }
+
         return {
-          fill : [part.fill.r, part.fill.g, part.fill.b, part.fill.a],
-          curves : part.curves.map(function(tri) {
-            return [tri.a.toA(), tri.b.toA(), tri.c.toA()];
-          })
+          fills : [
+            colorToInt(part.fills[0]),
+            colorToInt(part.fills[1])
+          ],
+          tris : triangles
         }
       });
       shapes[key-1] = shape;
@@ -50,10 +86,18 @@ class Main {
     Sys.println(json);
   }
 
+  public static function colorToInt(color:Color) : UInt {
+    return color.r << 24 | color.g << 16 | color.b << 8 | color.a;
+  }
+
+  public static function isLeft(a : Point, b : Point, c : Point) : Bool {
+    return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) > 0;
+  }
+
   public function new() {
     var path = Sys.args()[0];
     var bytes = sys.io.File.getBytes(path);
-    this.shapes = new Map<Int, Array<Shape>>();
+    this.shapes = new Map<Int, Shape>();
     this.clips = new Map<Int, Clip>();
     parse(bytes);
   }
@@ -86,7 +130,7 @@ class Main {
         }
       case TSandBox(_), TBackgroundColor(_), TUnknown(_), TActionScript3(_), TShowFrame:
       default:
-        trace('unhanded', format.swf.Tools.dumpTag(tag));
+        trace('Unhandled Tag', format.swf.Tools.dumpTag(tag));
     }
   }
 
@@ -100,16 +144,16 @@ class Main {
           if( object.cid != null ) {
             actors[object.depth] = { shape: object.cid };
           } else {
-            trace('Unhandled missing CID', object);
+            trace('Unhandled Missing CID', object);
           }
         case TShowFrame:
           var inFrame = new Map<Int, Actor>();
-		      for (depth in actors.keys()) {
-			      inFrame[depth] = {
+          for (depth in actors.keys()) {
+            inFrame[depth] = {
               shape : actors[depth].shape
               // TODO COPY TRANSFORM
             };
-		      }
+          }
           clip.frames.push({ actors: inFrame });
         default:
           trace('Unhandled Clip Tag', tag);
@@ -118,59 +162,90 @@ class Main {
     return clip;
   };
 
-  function handleShape(data : format.swf.ShapeData) : Array<Shape> {
+  function handleShape(data : format.swf.ShapeData) : Shape {
     var currentPoint = new Point();
-    var parts = new Array<Shape>();
+    var currentPoly = { points : new Array<Point>() };
+    var shape = { parts: [] };
     var fills = new Array<format.swf.FillStyle>();
     switch data {
       case SHDShape1(bounds, shapes) |
            SHDShape2(bounds, shapes) |
            SHDShape3(bounds, shapes):
-        var part : Shape = new Shape();
+        var part : Part = new Part([{ r : 0, g : 0, b : 0, a: 0 }, { r : 0, g : 0, b : 0, a: 0 }]);
+        fills = shapes.fillStyles;
         for( record in shapes.shapeRecords ) {
-          fills = shapes.fillStyles;
+          var currentPartFills = part.fills.copy();
           switch record {
-            case SHRChange(data):
-              if( data.newStyles != null && data.newStyles.fillStyles != null ) {
-                fills = data.newStyles.fillStyles;
+            case SHRChange(change):
+              if ( part.curves.length != 0 ) {
+                shape.parts.push(part);
+                part = new Part(part.fills.copy());
               }
-              if( data.fillStyle1 != null ) {
-                if( data.fillStyle1.idx > 0 ) {
-                  var fill = fills[data.fillStyle1.idx - 1];
+              if( change.newStyles != null && change.newStyles.fillStyles != null ) {
+                fills = change.newStyles.fillStyles;
+              }
+              if( change.fillStyle0 != null ) {
+                if( change.fillStyle0.idx > 0 ) {
+                  var fill = fills[change.fillStyle0.idx - 1];
                   switch fill {
-                    case FSSolid(rgb):
-                      part.fill = { r : rgb.r, g : rgb.g, b : rgb.b, a: 1 }
+                    case FSSolid(c):
+                      part.fills[0] = { r : c.r, g : c.g, b : c.b, a: 255 }
                     default:
-                      trace('Unhandled Fill', fill);
+                      trace('Unsupported Fill Style', fill);
                   }
                 } else {
-                  trace('Unhandled empty fill');
+                  part.fills[0] = { r : 0, g : 0, b : 0, a: 0 };
                 }
               }
-              if (data.moveTo != null) {
-                currentPoint = new Point(data.moveTo.dx, data.moveTo.dy);
+              if( change.fillStyle1 != null ) {
+                if( change.fillStyle1.idx > 0 ) {
+                  var fill = fills[change.fillStyle1.idx - 1];
+                  switch fill {
+                    case FSSolid(c):
+                      part.fills[1] = { r : c.r, g : c.g, b : c.b, a: 255 }
+                    default:
+                      trace('Unsupported Fill Style', fill);
+                  }
+                } else {
+                  part.fills[1] = { r : 0, g : 0, b : 0, a: 0 };
+                }
               }
+              if (change.moveTo != null) {
+                currentPoint = new Point(change.moveTo.dx, change.moveTo.dy);
+                if( currentPoly.points.length > 0 ) {
+                  part.polys.push(currentPoly);
+                  currentPoly = { points : new Array<Point>() }
+                }
+              }
+              // If the fills have changed, create a new part
+              // (colorToInt(currentPartFills[0]) != colorToInt(part.fills[0]) ||
+              //     colorToInt(currentPartFills[1]) != colorToInt(part.fix`lls[1])) &&
+
             case SHRCurvedEdge(cdx, cdy, adx, ady):
               var controlPoint = currentPoint.add(cdx, cdy);
               var anchorPoint = controlPoint.add(adx, ady);
-              part.curves.push({ a : currentPoint, b : controlPoint, c : anchorPoint });
+              var type = isLeft(currentPoint, controlPoint, anchorPoint) ? ConvexCurve : ConcaveCurve;
+              part.curves.push({ a : currentPoint, b : controlPoint, c : anchorPoint,  type: type });
               currentPoint = anchorPoint;
+              currentPoly.points.push(currentPoint.copy());
             case SHREdge(dx, dy):
               currentPoint = currentPoint.add(dx, dy);
+              currentPoly.points.push(currentPoint.copy());
             case SHREnd:
-              parts.push(part);
+              part.polys.push(currentPoly);
+              shape.parts.push(part);
           }
         }
       case SHDShape4(shapes):
         trace('Unhandled Shape', shapes);
     };
-    return parts;
+    return shape;
   }
 }
 
 class Point {
-  var x : Int;
-  var y : Int;
+  public var x : Int;
+  public var y : Int;
 
   public function new(x : Int = 0, y : Int = 0) {
     this.x = x;
@@ -184,12 +259,27 @@ class Point {
   public function toA() : Array<Int> {
     return [this.x, this.y];
   }
+
+  public function p2t() : org.poly2tri.Point {
+    return new org.poly2tri.Point(this.x, this.y);
+  }
+
+  public function copy() : Point {
+    return new Point(this.x, this.y);
+  }
+}
+
+enum TriangleType {
+  ConvexCurve;
+  ConcaveCurve;
+  SolidTriangle;
 }
 
 typedef Triangle = {
   var a : Point;
   var b : Point;
   var c : Point;
+  var type: TriangleType;
 };
 
 typedef Color = {
@@ -216,12 +306,22 @@ typedef Clip = {
   var frames : Array<Frame>;
 }
 
-class Shape {
-  public var fill : Color;
-  public var curves : Array<Triangle>;
+typedef Shape = {
+  var parts : Array<Part>;
+}
 
-  public function new() {
-    this.fill = { r : 1, g : 1, b : 1, a : 1 };
+typedef Poly = {
+  var points : Array<Point>;
+}
+
+class Part {
+  public var fills : Array<Color>;
+  public var curves : Array<Triangle>;
+  public var polys : Array<Poly>;
+
+  public function new(fills : Array<Color>) {
+    this.fills = fills;
     this.curves = new Array<Triangle>();
+    this.polys = new Array<Poly>();
   }
 }

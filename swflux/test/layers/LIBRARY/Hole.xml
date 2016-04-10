@@ -1,0 +1,27 @@
+<DOMSymbolItem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://ns.adobe.com/xfl/2008/" name="Hole" itemID="570201d7-00000127" linkageExportForAS="true" linkageClassName="hole" lastModified="1459749379">
+  <timeline>
+    <DOMTimeline name="Hole">
+      <layers>
+        <DOMLayer name="Layer 1" color="#4F80FF" current="true" isSelected="true">
+          <frames>
+            <DOMFrame index="0" keyMode="9728">
+              <elements>
+                <DOMShape>
+                  <fills>
+                    <FillStyle index="1">
+                      <SolidColor color="#CC3366"/>
+                    </FillStyle>
+                  </fills>
+                  <edges>
+                    <Edge fillStyle1="1" edges="!20 -340[#1B2.79 #FFFEDE.73 355.5 33!355.5 33[#25C.59 #FFFFF0.B9 853 -97!853 -97[892 -110 900 -150!900 -150[494 -460 -100 -355!-100 -355[-566 -199 -997 40!-997 40[-1002 43 -1005 50!-1005 50[#FFFD8B.1C #71.E6 -253 102!-253 102[#FFFEC6.32
+ #FFFFC3.B6 -101 -276!-101 -276[-47 -331 20 -340!-80 -679[877 -858 1157 -150!1157 -150[1240 59 1024 157!1024 157[-295 755 -1416 58!-1416 58[-1481 18 -1400 -47!-1400 -47[-813 -510 -80 -679"/>
+                  </edges>
+                </DOMShape>
+              </elements>
+            </DOMFrame>
+          </frames>
+        </DOMLayer>
+      </layers>
+    </DOMTimeline>
+  </timeline>
+</DOMSymbolItem>

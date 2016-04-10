@@ -1,0 +1,29 @@
+<DOMSymbolItem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://ns.adobe.com/xfl/2008/" name="triangle" itemID="57094abd-00000122" linkageExportForAS="true" linkageClassName="triangle" lastModified="1460226798">
+  <timeline>
+    <DOMTimeline name="triangle">
+      <layers>
+        <DOMLayer name="Layer 1" color="#4F80FF" current="true" isSelected="true">
+          <frames>
+            <DOMFrame index="0" keyMode="9728">
+              <elements>
+                <DOMShape>
+                  <fills>
+                    <FillStyle index="1">
+                      <SolidColor color="#CC33CC"/>
+                    </FillStyle>
+                  </fills>
+                  <edges>
+                    <Edge fillStyle1="1" edges="!-40 -1100/1380 460!1380 460/-1320 1100!-1320 1100/-40 -1100"/>
+                    <Edge cubics="!-40 -1100(;-40,-1100 1380,460 1380,460p-40 -1100q1380 460);"/>
+                    <Edge cubics="!1380 460(;1380,460 -1320,1100 -1320,1100p1380 460q-1320 1100);"/>
+                    <Edge cubics="!-1320 1100(;-1320,1100 -40,-1100 -40,-1100p-1320 1100 -40 -1100);"/>
+                  </edges>
+                </DOMShape>
+              </elements>
+            </DOMFrame>
+          </frames>
+        </DOMLayer>
+      </layers>
+    </DOMTimeline>
+  </timeline>
+</DOMSymbolItem>
