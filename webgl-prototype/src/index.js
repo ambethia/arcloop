@@ -5,8 +5,8 @@ import aaFragmentShader from './shaders/bezier-aa.f.glsl';
 import createProgram from './shaders/createProgram';
 
 // import animData from '../test/simple.json';
-import animData from '../test/blob.json';
-// import animData from '../test/layers.json';
+// import animData from '../test/blob.json';
+import animData from '../test/layers.json';
 
 import { mat4 } from 'gl-matrix';
 
@@ -24,7 +24,7 @@ function resizeCanvas() {
 }
 
 const ANIMATION_TIMING = 30;
-const VEC_ATTR_LENGTH = 13;
+const VEC_ATTR_LENGTH = 9;
 const canvas = document.createElement('canvas');
 const gl = canvas.getContext('webgl');
 window.gl = gl;
@@ -35,30 +35,28 @@ gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 const shaderProgram = createProgram(gl, vertexShader, aaEnabled ? aaFragmentShader : fragmentShader);
 const positionLocation = gl.getAttribLocation(shaderProgram, 'position');
 const typeLocation = gl.getAttribLocation(shaderProgram, 'type');
-const fill0Location = gl.getAttribLocation(shaderProgram, 'fill0');
-const fill1Location = gl.getAttribLocation(shaderProgram, 'fill1');
+const fillLocation = gl.getAttribLocation(shaderProgram, 'fill');
 const buffer = gl.createBuffer();
 const viewMatrix = mat4.create();
 const projectionMatrix = mat4.create();
-const viewLocation = gl.getUniformLocation(shaderProgram, "view");
-const projectionLocation = gl.getUniformLocation(shaderProgram, "projection");
+const viewLocation = gl.getUniformLocation(shaderProgram, 'view');
+const projectionLocation = gl.getUniformLocation(shaderProgram, 'projection');
 
 let frameDelta = 0;
 let globalFrame = 0;
 let data = [];
 
 function update() {
-  let anim = animData.animations['blob'];
+  let anim = animData.animations['hole'];
   let i = globalFrame % anim.frames.length;
   let f = anim.frames[i];
   data = animData.shapes[f].reduce((shapes, shape, d) => {
-    let fill0 = extractRGBA(shape.fills[0]);
-    let fill1 = extractRGBA(shape.fills[1]);
+    let fill = extractRGBA(shape.fill);
     return shapes.concat(shape.tris.reduce((tris, tri) => {
       return tris.concat([
-        tri[0][0], tri[0][1], -d, 0, tri[3], ...fill0, ...fill1,
-        tri[1][0], tri[1][1], -d, 1, tri[3], ...fill0, ...fill1,
-        tri[2][0], tri[2][1], -d, 2, tri[3], ...fill0, ...fill1,
+        tri[0][0], tri[0][1], -d, 0, tri[3], ...fill,
+        tri[1][0], tri[1][1], -d, 1, tri[3], ...fill,
+        tri[2][0], tri[2][1], -d, 2, tri[3], ...fill,
       ]);
     }, []));
   }, []);
@@ -87,12 +85,10 @@ function render() {
     gl.bufferData(gl.ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(positionLocation);
     gl.enableVertexAttribArray(typeLocation);
-    gl.enableVertexAttribArray(fill0Location);
-    gl.enableVertexAttribArray(fill1Location);
+    gl.enableVertexAttribArray(fillLocation);
     gl.vertexAttribPointer(positionLocation, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 0);
     gl.vertexAttribPointer(typeLocation, 1, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 4 * Int16Array.BYTES_PER_ELEMENT);
-    gl.vertexAttribPointer(fill0Location, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 5 * Int16Array.BYTES_PER_ELEMENT);
-    gl.vertexAttribPointer(fill1Location, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 9 * Int16Array.BYTES_PER_ELEMENT);
+    gl.vertexAttribPointer(fillLocation, 4, gl.SHORT, false, VEC_ATTR_LENGTH * Int16Array.BYTES_PER_ELEMENT, 5 * Int16Array.BYTES_PER_ELEMENT);
     gl.drawArrays(gl.TRIANGLES, 0, data.length / VEC_ATTR_LENGTH);
   }
   requestAnimationFrame(render);

@@ -1,5 +1,46 @@
 package xyz.arcloop.swflux;
 
+interface Edge {
+  var points : Array<Point>;
+  public function connectsTo(edge : Edge) : Bool;
+}
+
+class StraightEdge implements Edge {
+  public var points : Array<Point>;
+
+  public function new(a : Point, b : Point) {
+    this.points = [a, b];
+  }
+
+  public function connectsTo(edge : Edge) : Bool {
+    return this.points[1] == edge.points[0];
+  }
+}
+
+class CurvedEdge implements Edge {
+  public var points : Array<Point>;
+
+  public function new(a : Point, b : Point, c : Point) {
+    this.points = [a, b, c];
+  }
+
+  public function connectsTo(edge : Edge) : Bool {
+    return this.points[2] == edge.points[0];
+  }
+
+  public function toTri() : Triangle {
+    var type = isConvex() ? ConvexCurve : ConcaveCurve;
+    return new Triangle(this.points[0], this.points[1], this.points[2], type);
+  }
+
+  function isConvex() : Bool {
+    var a = this.points[0];
+    var b = this.points[1];
+    var c = this.points[2];
+    return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) > 0;
+  }
+}
+
 class Point {
   public var x : Int;
   public var y : Int;
@@ -26,17 +67,10 @@ class Point {
   }
 }
 
-class Part {
-  public var fills : Array<Color>;
-  public var curves : Array<Triangle>;
-  public var polys : Array<Poly>;
-
-  public function new(fills : Array<Color>) {
-    this.fills = fills;
-    this.curves = new Array<Triangle>();
-    this.polys = new Array<Poly>();
-  }
-}
+typedef Part = {
+  var fill : Color;
+  var edges : Array<Edge>;
+};
 
 enum TriangleType {
   ConvexCurve;
@@ -44,12 +78,23 @@ enum TriangleType {
   SolidTriangle;
 }
 
-typedef Triangle = {
-  var a : Point;
-  var b : Point;
-  var c : Point;
-  var type: TriangleType;
-};
+class Triangle {
+  public var a : Point;
+  public var b : Point;
+  public var c : Point;
+  public var type : TriangleType;
+
+  public function new(a : Point, b : Point, c : Point, type : TriangleType) {
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.type = type;
+  }
+
+  public function serialize() : Array<Dynamic> {
+    return [[a.x, a.y], [b.x, b.y], [c.x, c.y], type];
+  }
+}
 
 typedef Color = {
   var r : Int;
