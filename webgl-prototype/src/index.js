@@ -5,8 +5,8 @@ import aaFragmentShader from './shaders/bezier-aa.f.glsl';
 import createProgram from './shaders/createProgram';
 
 // import animData from '../test/simple.json';
-// import animData from '../test/blob.json';
-import animData from '../test/layers.json';
+import animData from '../test/blob.json';
+// import animData from '../test/layers.json';
 
 import { mat4 } from 'gl-matrix';
 
@@ -19,7 +19,7 @@ function resizeCanvas() {
     canvas.height = height;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     mat4.lookAt(viewMatrix, [0,0,1], [0,0,0], [0,1,0]);
-    mat4.ortho(projectionMatrix, -width*2, width*2, height*2, -height*2, 0, 200);
+    mat4.ortho(projectionMatrix, -width*4, width*4, height*4, -height*4, 0, 200);
   }
 }
 
@@ -47,7 +47,7 @@ let globalFrame = 0;
 let data = [];
 
 function update() {
-  let anim = animData.animations['hole'];
+  let anim = animData.animations['blob'];
   let i = globalFrame % anim.frames.length;
   let f = anim.frames[i];
   data = animData.shapes[f].reduce((shapes, shape, d) => {
@@ -56,7 +56,7 @@ function update() {
       return tris.concat([
         tri[0][0], tri[0][1], -d, 0, tri[3], ...fill,
         tri[1][0], tri[1][1], -d, 1, tri[3], ...fill,
-        tri[2][0], tri[2][1], -d, 2, tri[3], ...fill,
+        tri[2][0], tri[2][1], -d, 2, tri[3], ...fill
       ]);
     }, []));
   }, []);
